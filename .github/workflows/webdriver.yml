@@ -1,0 +1,104 @@
+name: WebDriver
+
+on:
+  push:
+    branches: [master, develop, feature/github]
+  pull_request: ~
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: "Browser"
+        type: choice
+        required: true
+        default: chrome
+        options:
+          - chrome
+      run_smoke:
+        description: "Run Smoke suite"
+        type: boolean
+        required: false
+        default: false
+      run_custom:
+        description: "Run a custom command"
+        type: boolean
+        required: false
+        default: false
+      custom_command:
+        description: "Custom npm command"
+        required: false
+        default: ""
+
+jobs:
+  preparation:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    outputs:
+      commands: ${{ steps.collect.outputs.commands }}
+      browser: ${{ inputs.browser }}
+    steps:
+      - name: Collect selected suites into a command list
+        id: collect
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmds=("npm run test")
+          suites=()
+          # Add smoke
+          if [[ "${{ inputs.run_smoke }}" == "true" ]]; then suites+=("smoke"); fi
+          
+          # Append suites to every existing command
+          if (( ${#suites[@]} > 0 )); then
+            suite_csv="$(IFS=,; echo "${suites[*]}")"
+            for i in "${!cmds[@]}"; do
+              if [[ "${cmds[$i]}" == npm\ run* ]]; then
+                cmds[$i]="${cmds[$i]} -- --suite ${suite_csv}"
+              else
+                cmds[$i]="${cmds[$i]} --suite ${suite_csv}"
+              fi
+            done
+          fi
+          
+          # Optionally add a custom npm script (do not replace existing commands)
+          if [[ "${{ inputs.run_custom }}" == "true" ]]; then
+            if [[ -z "${{ inputs.custom_command }}" ]]; then
+              echo "Custom requested but custom_command is empty." >&2
+              exit 2
+            fi
+            cmds=("npm run ${{ inputs.custom_command }}")
+          fi
+          
+          # Emit as single-line JSON array for a matrix
+          json=$(printf '%s\n' "${cmds[@]}" | jq -R . | jq -sc .)
+          echo "commands=$json" >> "$GITHUB_OUTPUT"
+          echo "Planned commands: $json"
+  exec:
+    name: Run planned WebDriver commands
+    needs: preparation
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cmd: ${{ fromJson(needs.preparation.outputs.commands) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Execute WDIO
+        env:
+          BROWSER: ${{ needs.preparation.outputs.browser }}
+        run: |
+          echo "Browser: $BROWSER"
+          echo "Running: ${{ matrix.cmd }}"
+          ${{ matrix.cmd }}
