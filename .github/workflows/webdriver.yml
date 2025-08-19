@@ -18,6 +18,11 @@ on:
         type: boolean
         required: false
         default: false
+      run_links:
+        description: "Run Links suite"
+        type: boolean
+        required: false
+        default: false
       run_custom:
         description: "Run a custom command"
         type: boolean
@@ -41,10 +46,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cmds=("npm run test")
+          cmds=("npx wdio run ./wdio.conf.ts")
           suites=()
           # Add smoke
           if [[ "${{ inputs.run_smoke }}" == "true" ]]; then suites+=("smoke"); fi
+          if [[ "${{ inputs.run_links }}" == "true" ]]; then suites+=("links"); fi
           
           # Append suites to every existing command
           if (( ${#suites[@]} > 0 )); then

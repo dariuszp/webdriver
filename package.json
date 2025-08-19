@@ -11,6 +11,7 @@
   },
   "scripts": {
     "wdio": "wdio run ./wdio.conf.ts",
-    "test": "npm run wdio"
+    "test": "npm run wdio",
+    "types-check": "tsc --noEmit"
   }
 }

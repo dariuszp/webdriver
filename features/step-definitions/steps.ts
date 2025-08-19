@@ -16,3 +16,8 @@ Then(/^I should see header saying (.*)$/, async (message) => {
     await expect(HomePage.header).toHaveText(message);
 });
 
+Then(/^I should see link pointing to (.*)$/, async (href) => {
+    await expect(HomePage.link).toBeExisting();
+    await expect(HomePage.link).toHaveAttribute('href', href);
+});
+

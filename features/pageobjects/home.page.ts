@@ -12,6 +12,10 @@ class HomePage extends Page {
         return $('h1');
     }
 
+    public get link () {
+        return $('a');
+    }
+
     /**
      * overwrite specific options to adapt it to page object
      */
