@@ -30,7 +30,7 @@ on:
 
 jobs:
   preparation:
-    runs-on: [self-hosted, linux, x64, ubuntu-22.04]
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     outputs:
       commands: ${{ steps.collect.outputs.commands }}
@@ -75,7 +75,7 @@ jobs:
   exec:
     name: Run planned WebDriver commands
     needs: preparation
-    runs-on: [self-hosted, linux, x64, ubuntu-22.04]
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
